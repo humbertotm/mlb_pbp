@@ -1,0 +1,8 @@
+.git/
+
+# Python cache files
+__pycache__/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+

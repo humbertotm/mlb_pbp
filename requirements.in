@@ -1,0 +1,11 @@
+notebook
+ipython
+MLB-StatsAPI
+ruff
+ruff-lsp
+isort
+SQLAlchemy
+psycopg2
+alembic
+pydantic
+pydantic-sqlalchemy
