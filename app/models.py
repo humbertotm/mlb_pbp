@@ -87,7 +87,7 @@ class AtBatDetails(Base):
     __tablename__ = "at_bat_details"
 
     id: Mapped[int] = Column(Integer, primary_key=True)
-    game_id: Mapped[int] = Column(Integer, ForeignKey("games.mlb_id"))
+    game_mlb_id: Mapped[int] = Column(Integer, ForeignKey("games.mlb_id"))
     sport_id: Mapped[int] = Column(Integer, nullable=True)
     season: Mapped[int] = Column(Integer, nullable=False)
     details: Mapped[dict] = Column(JSONB)

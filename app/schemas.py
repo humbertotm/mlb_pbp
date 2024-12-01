@@ -45,7 +45,7 @@ class GameSchema(BaseModel):
 
 
 class AtBatDetailsSchema(BaseModel):
-    game_id: int
+    game_mlb_id: int
     sport_id: int
     season: int
     details: dict
