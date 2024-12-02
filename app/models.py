@@ -1,6 +1,6 @@
 from datetime import date
 from typing import List
-from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Index, Integer, String
 
 from sqlalchemy.orm import Mapped, relationship
 from sqlalchemy.ext.declarative import declarative_base
@@ -80,7 +80,12 @@ class Game(Base):
     home_team: Mapped["Team"] = relationship("Team", foreign_keys=[home_team_mlb_id])
     away_team_mlb_id: Mapped[int] = Column(Integer, ForeignKey("teams.mlb_id"))
     away_team: Mapped["Team"] = relationship("Team", foreign_keys=[away_team_mlb_id])
-    # at_bats: Mapped[List["AtBat"]] = relationship(back_populates="AtBat.game")
+    at_bats: Mapped[List["AtBat"]] = relationship("AtBat", back_populates="game", foreign_keys="AtBat.game_id")
+    mlb_at_bats: Mapped[List["AtBat"]] = relationship("AtBat", back_populates="mlb_game", foreign_keys="AtBat.game_mlb_id")
+
+    __table_args__ = (
+        Index("idx_game_mlb_id", "mlb_id"),
+    )
 
 
 class AtBatDetails(Base):
@@ -97,25 +102,37 @@ class AtBat(Base):
     __tablename__ = "at_bats"
 
     id: Mapped[int] = Column(Integer, primary_key=True)
-    mlb_id: Mapped[int] = Column(Integer, nullable=False, unique=True)
     sport_id: Mapped[int] = Column(Integer, nullable=True)
-    call: Mapped[str] = Column(String, nullable=False)
-    score_before_at_bat: Mapped[int] = Column(Integer, nullable=False)
-    score_after_at_bat: Mapped[int] = Column(Integer, nullable=False)
+    at_bat_index: Mapped[int] = Column(Integer, nullable=False)
+    has_out: Mapped[bool] = Column(Boolean, nullable=False)
     outs: Mapped[int] = Column(Integer, nullable=False)
+    balls: Mapped[int] = Column(Integer, nullable=False)
+    strikes: Mapped[int] = Column(Integer, nullable=False)
+    total_pitch_count: Mapped[int] = Column(Integer, nullable=False)
     inning: Mapped[int] = Column(Integer, nullable=False)
-    top: Mapped[bool] = Column(Boolean, nullable=False)
+    is_top_inning: Mapped[bool] = Column(Boolean, nullable=False)
+    result: Mapped[dict] = Column(JSONB)
+    rbi: Mapped[int] = Column(Integer, nullable=False)
+    event_type: Mapped[str] = Column(String, nullable=False)
+    is_scoring_play: Mapped[bool] = Column(Boolean, nullable=False)
     r1b: Mapped[bool] = Column(Boolean, nullable=False)
     r2b: Mapped[bool] = Column(Boolean, nullable=False)
     r3b: Mapped[bool] = Column(Boolean, nullable=False)
+    details: Mapped[dict] = Column(JSONB)
 
     # Relationships
     game_id: Mapped[int] = Column(Integer, ForeignKey("games.id"))
     game: Mapped["Game"] = relationship("Game", foreign_keys=[game_id])
+    game_mlb_id: Mapped[int] = Column(Integer, ForeignKey("games.mlb_id"))
+    mlb_game: Mapped["Game"] = relationship("Game", foreign_keys=[game_mlb_id])
     pitcher_id: Mapped[int] = Column(Integer, ForeignKey("players.id"))
     pitcher: Mapped["Player"] = relationship("Player", foreign_keys=[pitcher_id])
+    pitcher_mlb_id: Mapped[int] = Column(Integer, ForeignKey("players.mlb_id"))
+    mlb_pitcher: Mapped["Player"] = relationship("Player", foreign_keys=[pitcher_mlb_id])
     batter_id: Mapped[int] = Column(Integer, ForeignKey("players.id"))
     batter: Mapped["Player"] = relationship("Player", foreign_keys=[batter_id])
+    batter_mlb_id: Mapped[int] = Column(Integer, ForeignKey("players.mlb_id"))
+    mlb_batter: Mapped["Player"] = relationship("Player", foreign_keys=[batter_mlb_id])
     # pitches: Mapped[List["Pitch"]] = relationship(back_populates="Pitch.at_bat")
 
 
