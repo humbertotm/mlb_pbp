@@ -1,15 +1,8 @@
-from datetime import date, datetime
-
-import statsapi
-from app.models import AtBat
-from app.scripts import constants, utils
-from sqlalchemy.orm import Session
-
-
 def get_pitches_for_at_bat(at_bat_obj):
     # Extract the "playEvents" list from the at_bat_obj to pitches
     pitches_list = at_bat_obj.get("playEvents", [])
     return pitches_list
+
 
 def get_runner_movements_for_at_bat(at_bat_obj):
     # Extract the runner_movements_list from at_bat_obj["runners"]
@@ -19,11 +12,12 @@ def get_runner_movements_for_at_bat(at_bat_obj):
         {
             "start": movement.get("start"),
             "end": movement.get("end"),
-
-        } for movement in runners_data
+        }
+        for movement in runners_data
     ]
 
     return runner_movements_list
+
 
 def load_at_bats_and_pitches():
     # With an open sqlalchemy Session:

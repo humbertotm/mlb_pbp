@@ -78,7 +78,7 @@ def load_players(sport_id: int, start_season: int, end_season: int) -> None:
                 # the record will be appended to the list.
                 PlayerSchema.from_orm(player_instance)
                 players_list.append(player_instance)
-            except Exception as e:
+            except Exception:
                 print(f"Failed validation for player with mlb_id {player['id']}")
 
         session.bulk_save_objects(players_list)

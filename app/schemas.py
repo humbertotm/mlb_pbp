@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from datetime import date
 from typing import Optional
 
+
 class PlayerSchema(BaseModel):
     mlb_id: int
     full_name: str
@@ -49,6 +50,37 @@ class AtBatDetailsSchema(BaseModel):
     sport_id: int
     season: int
     details: dict
+
+    class Config:
+        orm_mode = True
+
+
+class AtBatSchema(BaseModel):
+    sport_id: int
+    at_bat_index: int
+    has_out: bool
+    outs: int
+    balls: int
+    strikes: int
+    total_pitch_count: int
+    inning: int
+    is_top_inning: bool
+    result: dict
+    rbi: int
+    event_type: Optional[str]
+    is_scoring_play: bool
+    r1b: bool
+    r2b: bool
+    r3b: bool
+    details: dict
+
+    # Relationships
+    game_id: int
+    game_mlb_id: int
+    pitcher_id: int
+    pitcher_mlb_id: int
+    batter_id: int
+    batter_mlb_id: int
 
     class Config:
         orm_mode = True

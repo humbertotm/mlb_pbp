@@ -13,6 +13,7 @@ def get_existing_teams_map() -> dict:
         teams = session.query(Team).all()
         return {team.mlb_id: team.name for team in teams}
 
+
 def get_teams_data(sport_id, start_season, end_season):
     # Declare a teams_map.
     teams_map = {}
@@ -21,7 +22,9 @@ def get_teams_data(sport_id, start_season, end_season):
     # Iterate over every season in the desired range.
     for season in range(start_season, end_season):
         # Extract the "teams" list from the response.
-        teams_api_response = statsapi.get("teams", {"sportId": sport_id, "season": season}) or {}
+        teams_api_response = (
+            statsapi.get("teams", {"sportId": sport_id, "season": season}) or {}
+        )
         teams_list = teams_api_response.get("teams", [])
         # Write the team objects to the teams_map. Key is the team "id", value is the object.
         for team in teams_list:
@@ -39,6 +42,7 @@ def get_teams_data(sport_id, start_season, end_season):
     )
 
     return teams_map
+
 
 def load_teams(sport_id, start_season, end_season):
     # Declare teams list.
@@ -62,7 +66,7 @@ def load_teams(sport_id, start_season, end_season):
             try:
                 TeamSchema.from_orm(team_instance)
                 teams_list.append(team_instance)
-            except Exception as e:
+            except Exception:
                 print(f"Failed validation for team with mlb_id {team.get('id')}")
 
         # Bulk write the teams list to the teams table.
