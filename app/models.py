@@ -32,16 +32,12 @@ class Player(Base):
     # batter_type: Mapped[int] = Column(Integer, nullable=True)
 
     # Relationships
-    # at_bats: Mapped[List["AtBat"]] = relationship("AtBat", back_populates="AtBat.batter")
-    # at_bats: Mapped[List["AtBat"]] = relationship(
-    #     secondary=association_table, back_populates="AtBat.batter"
-    # )
-    # pitched_at_bats: Mapped[List["AtBat"]] = relationship(
-    #     "AtBat", back_populates="AtBat.pitcher"
-    # )
-    # pitched_at_bats: Mapped[List["AtBat"]] = relationship(
-    #     secondary=association_table, back_populates="AtBat.pitcher",
-    # )
+    at_bats: Mapped[List["AtBat"]] = relationship(
+        "AtBat", back_populates="batter", foreign_keys="AtBat.batter_id"
+    )
+    pitched_at_bats: Mapped[List["AtBat"]] = relationship(
+        "AtBat", back_populates="pitcher", foreign_keys="AtBat.pitcher_id"
+    )
 
 
 class Team(Base):
@@ -137,7 +133,9 @@ class AtBat(Base):
     batter: Mapped["Player"] = relationship("Player", foreign_keys=[batter_id])
     batter_mlb_id: Mapped[int] = Column(Integer, ForeignKey("players.mlb_id"))
     mlb_batter: Mapped["Player"] = relationship("Player", foreign_keys=[batter_mlb_id])
-    # pitches: Mapped[List["Pitch"]] = relationship(back_populates="Pitch.at_bat")
+    pitches: Mapped[List["Pitch"]] = relationship(
+        "Pitch", back_populates="at_bat", foreign_keys="Pitch.at_bat_id"
+    )
 
 
 class Pitch(Base):
