@@ -123,7 +123,6 @@ def load_at_bats(sport_id: int, start_season: int, end_season: int) -> None:
         session.commit()
 
 
-# Did 11, missing 1, 12, 13, 14, 16
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load AtBats data")
     parser.add_argument("--sport-id", type=int, required=True, help="ID of the league")
