@@ -83,7 +83,10 @@ class Game(Base):
         "AtBat", back_populates="mlb_game", foreign_keys="AtBat.game_mlb_id"
     )
 
-    __table_args__ = (Index("idx_game_mlb_id", "mlb_id"),)
+    __table_args__ = (
+        Index("idx_game_mlb_id", "mlb_id"),
+        Index("idx_game_season", "season"),
+    )
 
 
 class AtBatDetails(Base):
@@ -137,6 +140,14 @@ class AtBat(Base):
         "Pitch", back_populates="at_bat", foreign_keys="Pitch.at_bat_id"
     )
 
+    __table_args__ = (
+        Index("idx_at_bat_sport_id", "sport_id"),
+        Index("idx_at_bat_pitcher_id", "pitcher_id"),
+        Index("idx_at_bat_batter_id", "batter_id"),
+        Index("idx_at_bat_pitcher_mlb_id", "pitcher_mlb_id"),
+        Index("idx_at_bat_batter_mlb_id", "batter_mlb_id"),
+    )
+
 
 class Pitch(Base):
     __tablename__ = "pitches"
@@ -164,3 +175,5 @@ class Pitch(Base):
     # Relationships
     at_bat_id: Mapped[int] = Column(Integer, ForeignKey("at_bats.id"))
     at_bat: Mapped["AtBat"] = relationship("AtBat", foreign_keys=[at_bat_id])
+
+    __table_args__ = (Index("idx_pitch_at_bat_id", "at_bat_id"),)
