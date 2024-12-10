@@ -9,3 +9,8 @@ psycopg2
 alembic
 pydantic
 pydantic-sqlalchemy
+pandas
+adbc_driver_manager
+adbc_driver_sqlite
+adbc_driver_postgresql
+pyarrow
