@@ -1,0 +1,20 @@
+# Query to select all pitches for a player
+SELECT p.*, g.sport_id, g.season 
+FROM pitches p 
+JOIN at_bats ab ON p.at_bat_id = ab.id 
+JOIN games g ON ab.game_id = g.id 
+WHERE ab.batter_id = <batter_id of interest>;
+
+# Start a DB connection using the adbc postgres driver for better perf
+import adbc_driver_postgresql.dbapi as dbapi
+with dbapi.connect(db_uri) as conn:
+
+# Load player pitches into a pandas dataframe
+# Assuming pandas was imported as pd and and db conn has been established
+player_pitches_df = pd.read_sql_query(pitches_query, conn, index_col="id")
+
+# Filtering a subset of player_pitches_df
+full_count_df = player_pitches_df[
+    (player_pitches_df["ball_count"] == 3) 
+    & (player_pitches_df["strike_count"] == 2)
+]
