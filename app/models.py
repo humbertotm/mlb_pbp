@@ -22,6 +22,8 @@ class Player(Base):
     throws: Mapped[str] = Column(String, nullable=True)
     bats: Mapped[str] = Column(String, nullable=True)
     birth_date: Mapped[date] = Column(Date, nullable=True)
+    birth_city: Mapped[str] = Column(String, nullable=True)
+    birth_country: Mapped[str] = Column(String, nullable=True)
     primary_position_code: Mapped[str] = Column(String, nullable=True)
     primary_position: Mapped[str] = Column(String, nullable=True)
     active: Mapped[bool] = Column(Boolean, nullable=True)
