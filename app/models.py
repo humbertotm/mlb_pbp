@@ -13,8 +13,6 @@ Base = declarative_base()
 class Player(Base):
     __tablename__ = "players"
 
-    # [TODO] Fix relationships based on this piece of documentation:
-    # https://docs.sqlalchemy.org/en/20/orm/basic_relationships.html#setting-bi-directional-many-to-many
     id: Mapped[int] = Column(Integer, primary_key=True)
     mlb_id: Mapped[int] = Column(Integer, nullable=False, unique=True)
     full_name: Mapped[str] = Column(String, nullable=False)
