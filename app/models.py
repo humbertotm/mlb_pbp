@@ -63,6 +63,17 @@ class Team(Base):
 class Game(Base):
     __tablename__ = "games"
 
+    """
+    Game Types:
+    S: Spring Training
+    R: Regular Season
+    W: World Series
+    D: Divisional Series
+    C: ?? No games in MLB at least
+    L: League Championship Series
+    F: Wild Card
+    """
+
     id: Mapped[int] = Column(Integer, primary_key=True)
     mlb_id: Mapped[int] = Column(Integer, nullable=False, unique=True)
     sport_id: Mapped[int] = Column(Integer, nullable=True)
