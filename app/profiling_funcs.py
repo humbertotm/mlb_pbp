@@ -23,6 +23,14 @@ def get_pitcher_pitches(
     count: dict = None,
     options: dict = None,
 ) -> pd.DataFrame:
+    """
+    Get all pitches thrown by a pitcher. The set can be narrowed by providing
+    - sport_id: The sport ID of the league
+    - season: The season year
+    - count: A dictionary with the ball and strike count
+    - options: A dictionary with additional filters (Example: batter_hand, game_type)
+    """
+
     pitches_query_template = """
     SELECT 
     p.*, 
@@ -96,6 +104,14 @@ def get_batter_pitches(
     count: dict = None,
     options: dict = None,
 ) -> pd.DataFrame:
+    """
+    Get all pitches faced by a batter. The set can be narrowed by providing
+    - sport_id: The sport ID of the league
+    - season: The season year
+    - count: A dictionary with the ball and strike count
+    - options: A dictionary with additional filters (Example: pitcher_hand, game_type)
+    """
+
     pitches_query_template = """
     SELECT 
     p.*, 
@@ -162,6 +178,11 @@ def get_batter_pitches(
 
 
 def annotate_px_pz(row: pd.Series) -> pd.Series:
+    """
+    Extract the px and pz values for pitch location from the details column.
+    px: Horizontal location of the pitch in feet. Negative values are on the catcher's left from the middle of the plate.
+    pz: Vertical location of the pitch in feet. Negative values are below the low part of the strike zone.
+    """
     details = json.loads(row["details"])
     px = details.get("pitchData", {}).get("coordinates", {}).get("pX")
     pz = details.get("pitchData", {}).get("coordinates", {}).get("pZ")
@@ -170,6 +191,10 @@ def annotate_px_pz(row: pd.Series) -> pd.Series:
 
 
 def annotate_effective_batter_hand(row: pd.Series) -> str:
+    """
+    Get the effective batter hand.
+    If a batter is a switch batter, the effective batter hand will be based on the pitcher's hand.
+    """
     pitcher_hand = row["pitcher_hand"]
     batter_hand = row["batter_hand"]
     if batter_hand == "S":
@@ -179,6 +204,10 @@ def annotate_effective_batter_hand(row: pd.Series) -> str:
 
 
 def annotate_is_chasing_pitch(row: pd.Series) -> bool:
+    """
+    Determine if a pitch is a chasing pitch.
+    A chasing pitch is a pitch that is outside the strike zone and is at least 5 inches away from the edge of the strike zone.
+    """
     px = float(row["px"])
     pz = float(row["pz"])
     zone = int(row["zone"])
@@ -208,6 +237,11 @@ def annotate_is_chasing_pitch(row: pd.Series) -> bool:
 
 
 def annotate_pitch_location(row: pd.Series) -> str:
+    """
+    Determine the qualitative location of a pitch.
+    It is any combination of I (Inside), O (Outside), U (Up), M (Middle), D (Down).
+    This is based on the batter's handedness and the location of the pitch in the strike zone.
+    """
     pitch_location = []
     batter_hand = row["batter_hand"]
     sz_bottom = float(row["batter_sz_bottom"])
@@ -288,6 +322,14 @@ def annotate_pitch_location(row: pd.Series) -> str:
 
 
 def annotate_pitch_type(row: pd.Series) -> str:
+    """
+    Determine the type of pitch based on the pitch type code.
+    The pitch types are classified as:
+    - BREAKING: Curveball, Slider, Sweeper, etc.
+    - OFFSPEED: Changeup, Eephus, etc.
+    - FASTBALL: 4-Seam Fastball, 2-Seam Fastball, Cutter, etc.
+    - UNKNOWN: Any other pitch type
+    """
     pitch_type_code = row["pitch_type_code"]
     if pitch_type_code in BREAKING_PITCH_CODES:
         return "BREAKING"
@@ -309,6 +351,14 @@ def get_in_sz_data(
     count: dict = None,
     options: dict = None,
 ) -> None:
+    """
+    Get in-zone pitch data for a pitcher.
+    The data includes:
+    - Pitch type breakdown
+    - Location breakdown by pitch type
+    - In-zone rate by pitch type
+    - Usage rate by pitch type
+    """
     # Get the dataframe with the data
     player_pitches_df = get_pitcher_pitches(
         pitcher_id, sport_id, season, count, options
@@ -403,6 +453,14 @@ def get_out_sz_data(
     count: dict = None,
     options: dict = None,
 ) -> None:
+    """
+    Get out-of-zone pitch data for a pitcher.
+    The data includes:
+    - Pitch type breakdown
+    - Location breakdown by pitch type
+    - Out-of-zone rate by pitch type
+    - Usage rate by pitch type
+    """
     # Get the dataframe with the data
     player_pitches_df = get_pitcher_pitches(
         pitcher_id, sport_id, season, count, options
@@ -523,6 +581,10 @@ def get_ab_breaking_ball_insights(
     include_ch: bool = False,
     options: dict = None,
 ) -> None:
+    """
+    Get insights on the in-zone usage of breaking balls by a pitcher.
+    The idea is mostly to gauge the rate at which the pitcher throws two or more breaking balls in the strike zone in ABs with at least 3 pitches.
+    """
     breaking_ball_in_sz_threshold = 2
     if options:
         breaking_ball_in_sz_threshold = options.get("breaking_ball_in_sz_threshold", 2)
@@ -575,6 +637,11 @@ def get_batter_chase_rate(
     count: dict | None = None,
     options: dict = {},
 ) -> None:
+    """
+    Get the chase rate for a batter.
+    The chase rate is the percentage of pitches outside the strike zone that the batter swings at.
+    Can be further narrowed down by considering only pitches that are >5in away from the strike zone.
+    """
     # Get the dataframe with the data
     player_pitches_df = get_batter_pitches(batter_id, sport_id, season, count, options)
     batter_name = player_pitches_df.iloc[0]["batter_name"]
@@ -621,6 +688,10 @@ def get_batter_pitch_location_breakdown(
     count: dict | None = None,
     options: dict | None = None,
 ) -> None:
+    """
+    Get the pitch location breakdown for a batter.
+    The breakdown includes the percentage of pitches in each location as well as the strike zone rate by pitch type.
+    """
     # Get the dataframe with the data
     player_pitches_df = get_batter_pitches(batter_id, sport_id, season, count, options)
     batter_name = player_pitches_df.iloc[0]["batter_name"]
@@ -713,6 +784,9 @@ def get_batter_first_strike_take_rate(
     season: int | None = None,
     options: dict | None = None,
 ) -> None:
+    """
+    Provides insight on how often a batter takes the first pitch in the strike zone during an AB.
+    """
     # Get the dataframe with the data
     player_pitches_df = get_batter_pitches(
         batter_id=batter_id, sport_id=sport_id, season=season, options=options
