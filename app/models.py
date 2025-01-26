@@ -163,6 +163,53 @@ class AtBat(Base):
 class Pitch(Base):
     __tablename__ = "pitches"
 
+    """
+    Pitch Types
+    - (AB,"Automatic Ball")
+    - (CH,Changeup)
+    - (CS,"Slow Curve")
+    - (CU,Curveball)
+    - (EP,Eephus)
+    - (FA,Fastball)
+    - (FC,Cutter)
+    - (FF,"Four-Seam Fastball")
+    - (FO,Forkball)
+    - (FS,Splitter)
+    - (FT,"Two-Seam Fastball")
+    - (IN,"Intentional Ball")
+    - (KC,"Knuckle Curve")
+    - (KN,"Knuckle Ball")
+    - (PO,Pitchout)
+    - (SC,Screwball)
+    - (SI,Sinker)
+    - (SL,Slider)
+    - (ST,Sweeper)
+    - (SV,Slurve)
+
+    Pitch Calls
+    - (*B,"Ball In Dirt")
+    - (B,Ball)
+    - (C,"Called Strike")
+    - (D,"In play, no out")
+    - (E,"In play, run(s)")
+    - (F,Foul)
+    - (H,"Hit By Pitch")
+    - (I,"Intent Ball")
+    - (J,"In play, no out")
+    - (L,"Foul Bunt")
+    - (M,"Missed Bunt")
+    - (O,"Foul Tip")
+    - (P,Pitchout)
+    - (Q,"Swinging Pitchout")
+    - (R,"Foul Pitchout")
+    - (S,"Swinging Strike")
+    - (T,"Foul Tip")
+    - (W,"Swinging Strike (Blocked)")
+    - (X,"In play, out(s)")
+    - (Y,"In play, out(s)")
+    - (Z,"In play, run(s)")
+    """
+
     id: Mapped[int] = Column(Integer, primary_key=True)
     pitch_index: Mapped[int] = Column(Integer, nullable=False)
     ball_count: Mapped[int] = Column(Integer, nullable=False)
