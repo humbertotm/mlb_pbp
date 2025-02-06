@@ -1,8 +1,11 @@
 import json
 import adbc_driver_postgresql.dbapi as dbapi
 import pandas as pd
+from sqlalchemy.orm import Session
 from tabulate import tabulate
 
+from app.models import Player
+from app.scripts import db_engine
 from app.scripts.constants import (
     BREAKING_PITCH_CODES,
     FASTBALL_PITCH_CODES,
@@ -14,6 +17,18 @@ from app.scripts.constants import (
 
 
 DB_URI = "postgresql://mlb_pbp:mlb_pbp@localhost:5432/mlb_pbp"
+
+
+def get_player_by_mlb_id(mlb_id: int) -> Player | None:
+    with Session(db_engine) as session:
+        player = session.query(Player).filter(Player.mlb_id == mlb_id).first()
+        return player
+
+
+def get_player_by_name(full_name: str) -> Player | None:
+    with Session(db_engine) as session:
+        player = session.query(Player).filter(Player.full_name == full_name).first()
+        return player
 
 
 def get_pitcher_pitches(
@@ -773,6 +788,148 @@ def get_batter_pitch_location_breakdown(
 
     print(f"TOTAL PITCH COUNT FOR {batter_name}: {total_pitch_count}\n")
     print(tabulate(grouped_by_pitch_type_base_df, headers="keys", tablefmt="github"))
+    print(
+        "\n NOTE: BREAKDOWN DATA IN PERCENTAGE; LOCATION BREAKDOWN ACCOUNTS FOR BOTH IN AND OUT OF SZ PITCHES\n"
+    )
+
+
+def get_batter_strike_location_breakdown(
+    batter_id: int,
+    sport_id: int,
+    season: int | None = None,
+    count: dict | None = None,
+    options: dict | None = None,
+) -> None:
+    """
+    Get the pitch location breakdown for a batter.
+    The breakdown includes the percentage of pitches in each location as well as the strike zone rate by pitch type.
+    """
+    # Get the dataframe with the data
+    player_pitches_df = get_batter_pitches(batter_id, sport_id, season, count, options)
+    player_pitches_df = player_pitches_df[
+        player_pitches_df["zone"].isin(STRIKEZONE_ZONES)
+    ]
+    batter_name = player_pitches_df.iloc[0]["batter_name"]
+    # Drop rows with no call code
+    player_pitches_df = player_pitches_df.dropna(subset=["pitch_type_code"])
+    total_pitch_count = len(player_pitches_df)
+
+    player_pitches_df["pitch_type"] = player_pitches_df.apply(
+        annotate_pitch_type, axis=1
+    )
+    grouped_by_pitch_type_df = (
+        player_pitches_df.groupby("pitch_type")
+        .size()
+        .reset_index(name="pitch_type_count")
+    )
+    grouped_by_pitch_type_df["pitch_type_rate"] = (
+        (grouped_by_pitch_type_df["pitch_type_count"] / total_pitch_count) * 100
+    ).round(1)
+    player_pitches_df.loc[:, ["px", "pz"]] = player_pitches_df.apply(
+        annotate_px_pz, axis=1
+    )
+    player_pitches_df = player_pitches_df.dropna(subset=["px", "pz"])
+    player_pitches_df["pitch_location"] = player_pitches_df.apply(
+        annotate_pitch_location, axis=1
+    )
+    grouped_by_pitch_type_location_df = (
+        player_pitches_df.groupby(["pitch_type", "pitch_location"])
+        .size()
+        .reset_index(name="pitch_type_location_count")
+    )
+    grouped_by_pitch_type_location_df = grouped_by_pitch_type_location_df.assign(
+        pitch_type_location_rate=(
+            (
+                grouped_by_pitch_type_location_df["pitch_type_location_count"]
+                / total_pitch_count
+            )
+            * 100
+        ).round(1)
+    )
+    grouped_by_pitch_type_location_df = grouped_by_pitch_type_location_df.pivot(
+        index="pitch_type", columns="pitch_location", values="pitch_type_location_rate"
+    ).fillna(0)
+
+    grouped_by_pitch_type_df = grouped_by_pitch_type_df.merge(
+        grouped_by_pitch_type_location_df, on="pitch_type", how="left"
+    )
+
+    print(f"TOTAL PITCH COUNT IN SZ FOR {batter_name}: {total_pitch_count}\n")
+    print(tabulate(grouped_by_pitch_type_df, headers="keys", tablefmt="github"))
+    print(
+        "\n NOTE: BREAKDOWN DATA IN PERCENTAGE; LOCATION BREAKDOWN ACCOUNTS FOR BOTH IN AND OUT OF SZ PITCHES\n"
+    )
+
+
+def get_batter_chased_pitch_location_breakdown(
+    batter_id: int,
+    sport_id: int,
+    season: int | None = None,
+    count: dict | None = None,
+    options: dict | None = None,
+) -> None:
+    """
+    Get the pitch location breakdown for a batter.
+    The breakdown includes the percentage of pitches in each location as well as the strike zone rate by pitch type.
+    """
+    # Get the dataframe with the data
+    player_pitches_df = get_batter_pitches(batter_id, sport_id, season, count, options)
+    batter_name = player_pitches_df.iloc[0]["batter_name"]
+
+    # Drop rows with no call code
+    player_pitches_df = player_pitches_df.dropna(subset=["call_code"])
+    player_pitches_df = player_pitches_df[
+        player_pitches_df["zone"].isin(OUTSIDE_STRIKEZONE_ZONES)
+    ]
+    player_pitches_df = player_pitches_df[
+        player_pitches_df["call_code"].isin(SWUNG_AT_PITCH_CODES)
+    ]
+
+    # Drop rows with no call code
+    total_pitch_count = len(player_pitches_df)
+
+    player_pitches_df["pitch_type"] = player_pitches_df.apply(
+        annotate_pitch_type, axis=1
+    )
+    grouped_by_pitch_type_df = (
+        player_pitches_df.groupby("pitch_type")
+        .size()
+        .reset_index(name="pitch_type_count")
+    )
+    grouped_by_pitch_type_df["pitch_type_rate"] = (
+        (grouped_by_pitch_type_df["pitch_type_count"] / total_pitch_count) * 100
+    ).round(1)
+    player_pitches_df.loc[:, ["px", "pz"]] = player_pitches_df.apply(
+        annotate_px_pz, axis=1
+    )
+    player_pitches_df = player_pitches_df.dropna(subset=["px", "pz"])
+    player_pitches_df["pitch_location"] = player_pitches_df.apply(
+        annotate_pitch_location, axis=1
+    )
+    grouped_by_pitch_type_location_df = (
+        player_pitches_df.groupby(["pitch_type", "pitch_location"])
+        .size()
+        .reset_index(name="pitch_type_location_count")
+    )
+    grouped_by_pitch_type_location_df = grouped_by_pitch_type_location_df.assign(
+        pitch_type_location_rate=(
+            (
+                grouped_by_pitch_type_location_df["pitch_type_location_count"]
+                / total_pitch_count
+            )
+            * 100
+        ).round(1)
+    )
+    grouped_by_pitch_type_location_df = grouped_by_pitch_type_location_df.pivot(
+        index="pitch_type", columns="pitch_location", values="pitch_type_location_rate"
+    ).fillna(0)
+
+    grouped_by_pitch_type_df = grouped_by_pitch_type_df.merge(
+        grouped_by_pitch_type_location_df, on="pitch_type", how="left"
+    )
+
+    print(f"TOTAL CHASED PITCH COUNT FOR {batter_name}: {total_pitch_count}\n")
+    print(tabulate(grouped_by_pitch_type_df, headers="keys", tablefmt="github"))
     print(
         "\n NOTE: BREAKDOWN DATA IN PERCENTAGE; LOCATION BREAKDOWN ACCOUNTS FOR BOTH IN AND OUT OF SZ PITCHES\n"
     )
