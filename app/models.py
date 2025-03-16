@@ -1,8 +1,18 @@
-from datetime import date
+from datetime import date, datetime
 from typing import List
-from sqlalchemy import Boolean, Column, Date, Float, ForeignKey, Index, Integer, String
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+)
 
-from sqlalchemy.orm import Mapped, relationship
+from sqlalchemy.orm import declarative_mixin, Mapped, relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -10,7 +20,17 @@ from sqlalchemy.dialects.postgresql import JSONB
 Base = declarative_base()
 
 
-class Player(Base):
+@declarative_mixin
+class TimestampMixin:
+    created_at: Mapped[datetime] = Column(
+        DateTime, default=datetime.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = Column(
+        DateTime, default=datetime.now(), onupdate=datetime.now(), nullable=False
+    )
+
+
+class Player(Base, TimestampMixin):
     __tablename__ = "players"
 
     id: Mapped[int] = Column(Integer, primary_key=True)
@@ -39,8 +59,13 @@ class Player(Base):
         "AtBat", back_populates="pitcher", foreign_keys="AtBat.pitcher_id"
     )
 
+    __table_args__ = (
+        Index("idx_player_created_at", "created_at"),
+        Index("idx_player_updated_at", "updated_at"),
+    )
 
-class Team(Base):
+
+class Team(Base, TimestampMixin):
     __tablename__ = "teams"
 
     id: Mapped[int] = Column(Integer, primary_key=True)
@@ -59,8 +84,13 @@ class Team(Base):
         "Game", back_populates="away_team", foreign_keys="Game.away_team_mlb_id"
     )
 
+    __table_args__ = (
+        Index("idx_team_created_at", "created_at"),
+        Index("idx_team_updated_at", "updated_at"),
+    )
 
-class Game(Base):
+
+class Game(Base, TimestampMixin):
     __tablename__ = "games"
 
     """
@@ -97,6 +127,8 @@ class Game(Base):
     __table_args__ = (
         Index("idx_game_mlb_id", "mlb_id"),
         Index("idx_game_season", "season"),
+        Index("idx_game_created_at", "created_at"),
+        Index("idx_game_updated_at", "updated_at"),
     )
 
 
@@ -108,6 +140,8 @@ class AtBatDetails(Base):
     sport_id: Mapped[int] = Column(Integer, nullable=True)
     season: Mapped[int] = Column(Integer, nullable=False)
     details: Mapped[dict] = Column(JSONB)
+
+    __table_args__ = (Index("idx_abdetails_game_mlb_id", "game_mlb_id"),)
 
 
 class AtBat(Base):
@@ -157,6 +191,8 @@ class AtBat(Base):
         Index("idx_at_bat_batter_id", "batter_id"),
         Index("idx_at_bat_pitcher_mlb_id", "pitcher_mlb_id"),
         Index("idx_at_bat_batter_mlb_id", "batter_mlb_id"),
+        Index("idx_at_bat_game_id", "game_id"),
+        Index("idx_at_bat_game_mlb_id", "game_mlb_id"),
     )
 
 
