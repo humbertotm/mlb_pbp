@@ -130,7 +130,7 @@ def load_games(sport_id, start_date, end_date):
 
         # Commit all changes
         session.commit()
-        print(f"Sync complete:")
+        print("Sync complete:")
         print(f"- Updated: {stats['updated']} games")
         print(f"- Inserted: {stats['inserted']} new games")
         print(f"- Failed: {stats['failed']} games")

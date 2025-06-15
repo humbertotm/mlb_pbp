@@ -113,7 +113,7 @@ def load_players(sport_id: int, start_season: int, end_season: int) -> None:
 
         # Commit all changes
         session.commit()
-        print(f"Sync complete:")
+        print("Sync complete:")
         print(f"- Updated: {stats['updated']} players")
         print(f"- Inserted: {stats['inserted']} new players")
         print(f"- Failed: {stats['failed']} players")

@@ -91,7 +91,7 @@ def load_teams(sport_id, start_season, end_season):
 
         # Commit all changes
         session.commit()
-        print(f"Sync complete:")
+        print("Sync complete:")
         print(f"- Updated: {stats['updated']} teams")
         print(f"- Inserted: {stats['inserted']} new teams")
         print(f"- Failed: {stats['failed']} teams")
