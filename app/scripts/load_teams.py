@@ -11,13 +11,12 @@ from app.schemas import TeamSchema
 def get_existing_teams_map() -> dict:
     with Session(db_engine) as session:
         teams = session.query(Team).all()
-        return {team.mlb_id: team.name for team in teams}
+        return {team.mlb_id: team for team in teams}
 
 
 def get_teams_data(sport_id, start_season, end_season):
     # Declare a teams_map.
     teams_map = {}
-    existing_teams = get_existing_teams_map()
 
     # Iterate over every season in the desired range.
     for season in range(start_season, end_season):
@@ -29,10 +28,7 @@ def get_teams_data(sport_id, start_season, end_season):
         # Write the team objects to the teams_map. Key is the team "id", value is the object.
         for team in teams_list:
             team_id = team.get("id")
-            if team_id in existing_teams:
-                continue
-
-            # Use the freshest data if collision occurs.
+            # Always store the freshest data
             teams_map[team_id] = team
 
         print(f"Done processing teams {len(teams_list)} for season {season}")
@@ -45,34 +41,60 @@ def get_teams_data(sport_id, start_season, end_season):
 
 
 def load_teams(sport_id, start_season, end_season):
-    # Declare teams list.
-    teams_list = []
-    # Get teams map.
+    # Get teams map and existing teams
     teams_map = get_teams_data(sport_id, start_season, end_season)
-    # With an open slqalchemy Session,
+    existing_teams = get_existing_teams_map()
+
+    stats = {"updated": 0, "inserted": 0, "failed": 0}
+
+    # With an open sqlalchemy Session,
     with Session(db_engine) as session:
-        # iterate over every team in the map.
-        for team in teams_map.values():
-            # For every team, instantiate a Team object and append it to the teams list.
-            team_instance = Team(
-                mlb_id=int(team.get("id")),
-                sport_id=sport_id,
-                name=team.get("name"),
-                active=team.get("active", False),
-                hometown=team.get("locationName"),
-                details=team,
-            )
+        # Disable autoflush during the entire operation
+        with session.no_autoflush:
+            # iterate over every team in the map.
+            for team_data in teams_map.values():
+                try:
+                    team_mlb_id = int(team_data.get("id"))
+                    team_id = None
+                    if team_mlb_id in existing_teams:
+                        team_id = existing_teams[team_mlb_id].id
+                        stats["updated"] += 1
+                    else:
+                        stats["inserted"] += 1
 
-            try:
-                TeamSchema.from_orm(team_instance)
-                teams_list.append(team_instance)
-            except Exception:
-                print(f"Failed validation for team with mlb_id {team.get('id')}")
+                    # For every team, instantiate a Team object
+                    team_instance = Team(
+                        id=team_id,
+                        mlb_id=team_mlb_id,
+                        sport_id=sport_id,
+                        name=team_data.get("name"),
+                        active=team_data.get("active", False),
+                        hometown=team_data.get("locationName"),
+                        details=team_data,
+                    )
 
-        # Bulk write the teams list to the teams table.
-        session.bulk_save_objects(teams_list)
-        # Commit the session.
+                    # Validate the team data
+                    TeamSchema.from_orm(team_instance)
+
+                    # Merge will handle both insert and update
+                    session.merge(team_instance)
+
+                except Exception as e:
+                    stats["failed"] += 1
+                    print(
+                        f"Failed validation for team with mlb_id {team_data.get('id')}: {str(e)}"
+                    )
+                    session.rollback()
+
+            # Flush all changes at once
+            session.flush()
+
+        # Commit all changes
         session.commit()
+        print("Sync complete:")
+        print(f"- Updated: {stats['updated']} teams")
+        print(f"- Inserted: {stats['inserted']} new teams")
+        print(f"- Failed: {stats['failed']} teams")
 
 
 if __name__ == "__main__":
