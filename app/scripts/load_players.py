@@ -42,7 +42,7 @@ def get_players_data(sport_id: int, start_season: int, end_season: int) -> dict:
 def load_players(sport_id: int, start_season: int, end_season: int) -> None:
     players_map = get_players_data(sport_id, start_season, end_season)
     existing_players = get_existing_players_map()
-    
+
     stats = {"updated": 0, "inserted": 0, "failed": 0}
 
     with Session(db_engine) as session:
@@ -62,11 +62,17 @@ def load_players(sport_id: int, start_season: int, end_season: int) -> None:
                         is_player=player_data.get("isPlayer"),
                         throws=player_data.get("pitchHand", {}).get("code"),
                         bats=player_data.get("batSide", {}).get("code"),
-                        birth_date=datetime.strptime(player_data["birthDate"], "%Y-%m-%d").date()
+                        birth_date=datetime.strptime(
+                            player_data["birthDate"], "%Y-%m-%d"
+                        ).date()
                         if player_data.get("birthDate")
                         else None,
-                        primary_position_code=player_data.get("primaryPosition", {}).get("code"),
-                        primary_position=player_data.get("primaryPosition", {}).get("name"),
+                        primary_position_code=player_data.get(
+                            "primaryPosition", {}
+                        ).get("code"),
+                        primary_position=player_data.get("primaryPosition", {}).get(
+                            "name"
+                        ),
                         active=player_data.get("active"),
                         mlb_debut_date=datetime.strptime(
                             player_data["mlbDebutDate"], "%Y-%m-%d"
@@ -80,29 +86,31 @@ def load_players(sport_id: int, start_season: int, end_season: int) -> None:
                         else None,
                         details=player_data,
                     )
-                    
+
                     # Validate the player data
                     PlayerSchema.from_orm(player_instance)
-                    
+
                     # Check if player exists
                     player_id = player_instance.mlb_id
                     if player_id in existing_players:
                         stats["updated"] += 1
                     else:
                         stats["inserted"] += 1
-                    
+
                     # Merge will handle both insert and update
                     # merge() already attaches the instance to the session
                     session.merge(player_instance)
-                    
+
                 except Exception as e:
                     stats["failed"] += 1
-                    print(f"Failed validation for player with mlb_id {player_data['id']}: {str(e)}")
+                    print(
+                        f"Failed validation for player with mlb_id {player_data['id']}: {str(e)}"
+                    )
                     session.rollback()
 
             # Flush all changes at once
             session.flush()
-            
+
         # Commit all changes
         session.commit()
         print(f"Sync complete:")

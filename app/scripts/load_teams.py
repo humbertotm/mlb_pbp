@@ -44,7 +44,7 @@ def load_teams(sport_id, start_season, end_season):
     # Get teams map and existing teams
     teams_map = get_teams_data(sport_id, start_season, end_season)
     existing_teams = get_existing_teams_map()
-    
+
     stats = {"updated": 0, "inserted": 0, "failed": 0}
 
     # With an open sqlalchemy Session,
@@ -75,18 +75,20 @@ def load_teams(sport_id, start_season, end_season):
 
                     # Validate the team data
                     TeamSchema.from_orm(team_instance)
-                    
+
                     # Merge will handle both insert and update
                     session.merge(team_instance)
-                    
+
                 except Exception as e:
                     stats["failed"] += 1
-                    print(f"Failed validation for team with mlb_id {team_data.get('id')}: {str(e)}")
+                    print(
+                        f"Failed validation for team with mlb_id {team_data.get('id')}: {str(e)}"
+                    )
                     session.rollback()
 
             # Flush all changes at once
             session.flush()
-            
+
         # Commit all changes
         session.commit()
         print(f"Sync complete:")

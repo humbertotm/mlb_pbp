@@ -44,14 +44,14 @@ def get_games_data_for_date_range(sport_id, start_date, end_date):
     # Format dates for the API call
     start_date_str = start_date.strftime("%m/%d/%Y")
     end_date_str = end_date.strftime("%m/%d/%Y")
-    
+
     # Call the schedule function with sportId and date range
     games = statsapi.schedule(
         sportId=sport_id, start_date=start_date_str, end_date=end_date_str
     )
     games_map = {}
     team_ids = get_team_ids(sport_id)
-    
+
     for game in games:
         game_id = game.get("game_id")
 
@@ -71,7 +71,7 @@ def load_games(sport_id, start_date, end_date):
     # Get games data and existing games
     games_data = get_games_data_for_date_range(sport_id, start_date, end_date)
     existing_games = get_existing_games_map()
-    
+
     stats = {"updated": 0, "inserted": 0, "failed": 0}
 
     # With an open sqlalchemy Session:
@@ -93,8 +93,12 @@ def load_games(sport_id, start_date, end_date):
                     else:
                         stats["inserted"] += 1
 
-                    game_date = datetime.strptime(game_data["game_date"], "%Y-%m-%d").date() if game_data.get("game_date") else None
-                    
+                    game_date = (
+                        datetime.strptime(game_data["game_date"], "%Y-%m-%d").date()
+                        if game_data.get("game_date")
+                        else None
+                    )
+
                     # Instantiate a Game object
                     game_instance = Game(
                         id=game_id,
@@ -110,10 +114,10 @@ def load_games(sport_id, start_date, end_date):
 
                     # Validate the game data
                     GameSchema.from_orm(game_instance)
-                    
+
                     # Merge will handle both insert and update
                     session.merge(game_instance)
-                    
+
                 except Exception as e:
                     stats["failed"] += 1
                     print(
@@ -123,7 +127,7 @@ def load_games(sport_id, start_date, end_date):
 
             # Flush all changes at once
             session.flush()
-            
+
         # Commit all changes
         session.commit()
         print(f"Sync complete:")
@@ -135,8 +139,16 @@ def load_games(sport_id, start_date, end_date):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load games data")
     parser.add_argument("--sport-id", type=int, required=True, help="ID of the league")
-    parser.add_argument("--start-date", type=str, help="Start date (YYYY-MM-DD). If not provided, uses the most recent game date from the database.")
-    parser.add_argument("--end-date", type=str, help="End date (YYYY-MM-DD). If not provided, uses today's date.")
+    parser.add_argument(
+        "--start-date",
+        type=str,
+        help="Start date (YYYY-MM-DD). If not provided, uses the most recent game date from the database.",
+    )
+    parser.add_argument(
+        "--end-date",
+        type=str,
+        help="End date (YYYY-MM-DD). If not provided, uses today's date.",
+    )
     args = parser.parse_args()
 
     # Get the end date (today if not specified)
@@ -160,12 +172,14 @@ if __name__ == "__main__":
         start_date = get_max_game_date()
         # Add one day to avoid reloading the last day we already have
         start_date += timedelta(days=1)
-        print(f"Using start date: {start_date} (day after most recent game in database)")
+        print(
+            f"Using start date: {start_date} (day after most recent game in database)"
+        )
 
     if end_date < start_date:
         print("Error: End date must be after start date")
         exit(1)
-    
+
     print(f"Loading games for {args.sport_id} from {start_date} to {end_date}")
 
     load_games(args.sport_id, start_date, end_date)

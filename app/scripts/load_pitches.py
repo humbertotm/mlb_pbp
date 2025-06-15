@@ -12,11 +12,11 @@ from app.models import AtBat, Game, Pitch
 def get_at_bats_without_pitches(sport_id: int, season: int = None) -> list[AtBat]:
     """
     Get all AtBats that don't have any associated Pitch records.
-    
+
     Args:
         sport_id (int): The ID of the sport/league
         season (int, optional): If provided, only check at-bats from this season
-    
+
     Returns:
         list[AtBat]: List of AtBat records that need Pitch records
     """
@@ -26,31 +26,28 @@ def get_at_bats_without_pitches(sport_id: int, season: int = None) -> list[AtBat
             .join(Game, AtBat.game_id == Game.id)
             .filter(
                 AtBat.sport_id == sport_id,
-                ~AtBat.id.in_(
-                    select(Pitch.at_bat_id)
-                    .distinct()
-                )
+                ~AtBat.id.in_(select(Pitch.at_bat_id).distinct()),
             )
         )
-        
+
         # Add season filter if provided
         if season is not None:
             query = query.filter(Game.season == season)
-            
+
         return query.all()
 
 
 def load_pitches(sport_id: int, season: int = None) -> None:
     """
     Load Pitch records for all AtBats that don't have any Pitch records.
-    
+
     Args:
         sport_id (int): The ID of the sport/league
         season (int, optional): If provided, only process at-bats from this season
     """
     with Session(db_engine) as session:
         start_time = datetime.now()
-        
+
         # Get AtBats that need processing
         at_bats = get_at_bats_without_pitches(sport_id, season)
         print(
@@ -120,8 +117,15 @@ def load_pitches(sport_id: int, season: int = None) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load Pitches data")
     parser.add_argument("--sport-id", type=int, required=True, help="ID of the league")
-    parser.add_argument("--season", type=int, help="Season to process. If not provided, processes all seasons.")
+    parser.add_argument(
+        "--season",
+        type=int,
+        help="Season to process. If not provided, processes all seasons.",
+    )
     args = parser.parse_args()
 
-    print(f"Loading pitches for sport {args.sport_id}" + (f" for season {args.season}" if args.season else ""))
+    print(
+        f"Loading pitches for sport {args.sport_id}"
+        + (f" for season {args.season}" if args.season else "")
+    )
     load_pitches(args.sport_id, args.season)

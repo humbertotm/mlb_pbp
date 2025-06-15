@@ -11,37 +11,37 @@ from . import db_engine
 from app.models import AtBat, AtBatDetails, Game, Player
 
 
-def get_games_without_at_bats(sport_id: int, season: int = None) -> List[Tuple[int, int, datetime.date]]:
+def get_games_without_at_bats(
+    sport_id: int, season: int = None
+) -> List[Tuple[int, int, datetime.date]]:
     """
     Get a list of games that have no AtBat records.
-    
+
     Args:
         sport_id (int): The ID of the sport/league
         season (int, optional): If provided, only check games from this season
-    
+
     Returns:
-        List[Tuple[int, int, datetime.date]]: List of tuples containing (game_mlb_id, game_id, game_date) 
+        List[Tuple[int, int, datetime.date]]: List of tuples containing (game_mlb_id, game_id, game_date)
         for games that need AtBat records
     """
     with Session(db_engine) as session:
         # Get all games that don't have AtBat records
-        games_query = (
-            select(Game.mlb_id, Game.id, Game.game_date)
-            .where(
-                Game.sport_id == sport_id,
-                ~Game.mlb_id.in_(
-                    select(AtBat.game_mlb_id)
-                    .distinct()
-                    .where(AtBat.sport_id == sport_id)
-                )
-            )
+        games_query = select(Game.mlb_id, Game.id, Game.game_date).where(
+            Game.sport_id == sport_id,
+            ~Game.mlb_id.in_(
+                select(AtBat.game_mlb_id).distinct().where(AtBat.sport_id == sport_id)
+            ),
         )
-        
+
         # Add season filter if provided
         if season is not None:
             games_query = games_query.where(Game.season == season)
-        
-        return [(mlb_id, id, game_date) for mlb_id, id, game_date in session.execute(games_query)]
+
+        return [
+            (mlb_id, id, game_date)
+            for mlb_id, id, game_date in session.execute(games_query)
+        ]
 
 
 def get_player_id_mappings() -> Dict[int, int]:
@@ -55,7 +55,7 @@ def get_player_id_mappings() -> Dict[int, int]:
 def load_at_bats(sport_id: int, season: int = None) -> None:
     """
     Load AtBat records for all games that have AtBatDetails but no AtBat records.
-    
+
     Args:
         sport_id (int): The ID of the sport/league
         season (int, optional): If provided, only process games from this season
@@ -64,7 +64,7 @@ def load_at_bats(sport_id: int, season: int = None) -> None:
     with Session(db_engine) as session:
         start_time = datetime.now()
         at_bats = []
-        
+
         # Get games that need processing
         games_to_process = get_games_without_at_bats(sport_id, season)
         print(
@@ -78,11 +78,11 @@ def load_at_bats(sport_id: int, season: int = None) -> None:
                 session.query(AtBatDetails)
                 .filter(
                     AtBatDetails.game_mlb_id == game_mlb_id,
-                    AtBatDetails.sport_id == sport_id
+                    AtBatDetails.sport_id == sport_id,
                 )
                 .all()
             )
-            
+
             for ab_details in game_at_bat_details:
                 details = ab_details.details
                 pitches = [
@@ -160,8 +160,15 @@ def load_at_bats(sport_id: int, season: int = None) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load AtBats data")
     parser.add_argument("--sport-id", type=int, required=True, help="ID of the league")
-    parser.add_argument("--season", type=int, help="Season to process. If not provided, processes all seasons.")
+    parser.add_argument(
+        "--season",
+        type=int,
+        help="Season to process. If not provided, processes all seasons.",
+    )
     args = parser.parse_args()
 
-    print(f"Loading at-bats for sport {args.sport_id}" + (f" for season {args.season}" if args.season else ""))
+    print(
+        f"Loading at-bats for sport {args.sport_id}"
+        + (f" for season {args.season}" if args.season else "")
+    )
     load_at_bats(args.sport_id, args.season)

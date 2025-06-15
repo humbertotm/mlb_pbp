@@ -17,22 +17,24 @@ from . import db_engine
 def get_games_without_at_bats(sport_id: int, season: int = None) -> List[tuple]:
     """
     Get a list of game MLB IDs that don't have any corresponding AtBatDetails records.
-    
+
     Args:
         sport_id (int): The ID of the sport/league
         season (int, optional): If provided, only check games from this season
-    
+
     Returns:
         List[tuple]: List of tuples containing (game_mlb_id, game_date) for games needing at-bat details
     """
     with Session(db_engine) as session:
         # Build base query for games
-        games_query = select(Game.mlb_id, Game.game_date).where(Game.sport_id == sport_id)
-        
+        games_query = select(Game.mlb_id, Game.game_date).where(
+            Game.sport_id == sport_id
+        )
+
         # Add season filter if provided
         if season is not None:
             games_query = games_query.where(Game.season == season)
-        
+
         # Add subquery to exclude games that have at-bat details
         games_with_abs = (
             select(AtBatDetails.game_mlb_id)
@@ -41,11 +43,14 @@ def get_games_without_at_bats(sport_id: int, season: int = None) -> List[tuple]:
         )
         if season is not None:
             games_with_abs = games_with_abs.where(AtBatDetails.season == season)
-        
+
         # Get games that don't exist in AtBatDetails
         missing_games = games_query.where(~Game.mlb_id.in_(games_with_abs))
-        
-        return [(game_id, game_date) for game_id, game_date in session.execute(missing_games)]
+
+        return [
+            (game_id, game_date)
+            for game_id, game_date in session.execute(missing_games)
+        ]
 
 
 def get_at_bats_data_for_game(game_id: int) -> List[Dict]:
@@ -72,7 +77,7 @@ def fetch_game_at_bats(game_id: int) -> List[Dict]:
 def load_at_bat_details(sport_id: int, season: int = None) -> None:
     """
     Load at-bat details for all games that don't have them yet.
-    
+
     Args:
         sport_id (int): The ID of the sport/league
         season (int, optional): If provided, only process games from this season
@@ -90,7 +95,10 @@ def load_at_bat_details(sport_id: int, season: int = None) -> None:
         at_bats_to_save = []
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             future_to_game = {
-                executor.submit(fetch_game_at_bats, game_mlb_id): (game_mlb_id, game_date)
+                executor.submit(fetch_game_at_bats, game_mlb_id): (
+                    game_mlb_id,
+                    game_date,
+                )
                 for game_mlb_id, game_date in games_to_process
             }
 
@@ -99,8 +107,10 @@ def load_at_bat_details(sport_id: int, season: int = None) -> None:
                 try:
                     game_at_bats = future.result()
                     season = game_date.year if game_date else None
-                    print(f"Processing {len(game_at_bats)} at-bats for game {game_mlb_id} in season {season}")
-                    
+                    print(
+                        f"Processing {len(game_at_bats)} at-bats for game {game_mlb_id} in season {season}"
+                    )
+
                     for ab in game_at_bats:
                         ab_data = AtBatDetails(
                             game_mlb_id=game_mlb_id,
@@ -129,8 +139,15 @@ def load_at_bat_details(sport_id: int, season: int = None) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Load At Bat details data")
     parser.add_argument("--sport-id", type=int, required=True, help="ID of the league")
-    parser.add_argument("--season", type=int, help="Season to process. If not provided, processes all seasons.")
+    parser.add_argument(
+        "--season",
+        type=int,
+        help="Season to process. If not provided, processes all seasons.",
+    )
     args = parser.parse_args()
 
-    print(f"Loading at-bat details for sport {args.sport_id}" + (f" for season {args.season}" if args.season else ""))
+    print(
+        f"Loading at-bat details for sport {args.sport_id}"
+        + (f" for season {args.season}" if args.season else "")
+    )
     load_at_bat_details(args.sport_id, args.season)
